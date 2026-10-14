@@ -1,5 +1,7 @@
 # Biblioteca - API e self-checkout
 
+> **Desktop + Android:** consulte [COMO-RODAR-MOBILE-E-DESKTOP.md](COMO-RODAR-MOBILE-E-DESKTOP.md). O aplicativo Flutter está em `mobile/` e o APK pronto está em `distribuicao/`.
+
 > **Pacote unificado:** esta cópia também contém a interface em `src/Biblioteca.Api/wwwroot`. Para executar interface, API e banco juntos em outro computador, comece por [COMO-RODAR-EM-OUTRO-PC.md](COMO-RODAR-EM-OUTRO-PC.md) e use `Iniciar-Biblioteca.cmd`.
 
 Aplicação local completa em **C# / ASP.NET Core 10 + SQL Server**, com interface web e API no mesmo endereço. Ela permite catálogo, cadastro de alunos, gestão de usuários, empréstimos de balcão, autoempréstimo, devoluções parciais e auditoria.
