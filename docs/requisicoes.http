@@ -1,0 +1,65 @@
+@base = http://127.0.0.1:5180
+@adminToken = COLE_O_ACCESS_TOKEN_DO_ADMIN
+@leitorToken = COLE_O_ACCESS_TOKEN_DO_LEITOR
+@senhaAdmin = INFORME_SUA_SENHA_LOCAL
+@senhaLeitor = ESCOLHA_UMA_SENHA_DE_10_A_128_CARACTERES
+
+### Saúde
+GET {{base}}/health
+
+### Entrar como administrador
+POST {{base}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username":"admin","senha":"{{senhaAdmin}}"}
+
+### Criar leitor (use credenciais próprias; exemplos não são contas pré-criadas)
+POST {{base}}/api/v1/usuarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{"nome":"Leitor de demonstração","email":"leitor@example.invalid","username":"leitor.demo","senha":"{{senhaLeitor}}","perfil":"LEITOR"}
+
+### Entrar como leitor
+POST {{base}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username":"leitor.demo","senha":"{{senhaLeitor}}"}
+
+### Consultar catálogo
+GET {{base}}/api/v1/livros?page=1&pageSize=20
+Authorization: Bearer {{leitorToken}}
+
+### Consultar exemplar pela etiqueta
+GET {{base}}/api/v1/exemplares/codigo/DEMO-BD-001
+Authorization: Bearer {{leitorToken}}
+
+### Confirmar retirada: o usuário é identificado pelo token
+POST {{base}}/api/v1/self-checkout/emprestimos
+Authorization: Bearer {{leitorToken}}
+Content-Type: application/json
+
+{"codigosExemplares":["DEMO-BD-001","DEMO-API-001"]}
+
+### Histórico próprio
+GET {{base}}/api/v1/me/emprestimos
+Authorization: Bearer {{leitorToken}}
+
+### Comprovante: substitua 1 pelo idEmprestimo retornado
+GET {{base}}/api/v1/emprestimos/1
+Authorization: Bearer {{leitorToken}}
+
+### Devolução: substitua os identificadores pelos do comprovante
+POST {{base}}/api/v1/emprestimos/1/devolucoes
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{"idsExemplares":[1]}
+
+### Política vigente
+GET {{base}}/api/v1/configuracoes
+Authorization: Bearer {{leitorToken}}
+
+### Auditoria
+GET {{base}}/api/v1/auditoria?page=1&pageSize=20
+Authorization: Bearer {{adminToken}}

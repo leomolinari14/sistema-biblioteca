@@ -1,0 +1,213 @@
+/* Biblioteca acadêmica — esquema SQL Server 2016+.
+   Banco exclusivo deste projeto. Execute com ferramenta que reconheça GO.
+   Datas e horários da aplicação são armazenados em UTC. */
+USE [master];
+GO
+IF DB_ID(N'BibliotecaCodex_20260930') IS NULL
+    EXEC(N'CREATE DATABASE [BibliotecaCodex_20260930]');
+GO
+USE [BibliotecaCodex_20260930];
+GO
+SET ANSI_NULLS ON;
+SET ANSI_PADDING ON;
+SET ANSI_WARNINGS ON;
+SET ARITHABORT ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET QUOTED_IDENTIFIER ON;
+SET NUMERIC_ROUNDABORT OFF;
+GO
+
+IF OBJECT_ID(N'dbo.EDITORAS', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.EDITORAS (
+        IdEditora int IDENTITY(1,1) NOT NULL CONSTRAINT PK_EDITORAS PRIMARY KEY,
+        Nome nvarchar(160) NOT NULL,
+        Nacionalidade nvarchar(80) NULL,
+        Email nvarchar(254) NULL,
+        CONSTRAINT CK_EDITORAS_Nome CHECK (LEN(LTRIM(RTRIM(Nome))) > 0)
+    );
+END;
+GO
+
+IF OBJECT_ID(N'dbo.CATEGORIAS', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.CATEGORIAS (
+        IdCategoria int IDENTITY(1,1) NOT NULL CONSTRAINT PK_CATEGORIAS PRIMARY KEY,
+        Nome nvarchar(100) NOT NULL CONSTRAINT UQ_CATEGORIAS_Nome UNIQUE,
+        Descricao nvarchar(500) NULL,
+        CONSTRAINT CK_CATEGORIAS_Nome CHECK (LEN(LTRIM(RTRIM(Nome))) > 0)
+    );
+END;
+GO
+
+IF OBJECT_ID(N'dbo.AUTORES', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.AUTORES (
+        IdAutor int IDENTITY(1,1) NOT NULL CONSTRAINT PK_AUTORES PRIMARY KEY,
+        Nome nvarchar(160) NOT NULL,
+        Nacionalidade nvarchar(80) NULL,
+        CONSTRAINT CK_AUTORES_Nome CHECK (LEN(LTRIM(RTRIM(Nome))) > 0)
+    );
+END;
+GO
+
+IF OBJECT_ID(N'dbo.LIVROS', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.LIVROS (
+        IdLivro int IDENTITY(1,1) NOT NULL CONSTRAINT PK_LIVROS PRIMARY KEY,
+        IdEditora int NOT NULL,
+        IdCategoria int NOT NULL,
+        Titulo nvarchar(250) NOT NULL,
+        Isbn varchar(17) NULL,
+        AnoPublicacao smallint NOT NULL,
+        NumeroEdicao smallint NOT NULL CONSTRAINT DF_LIVROS_NumeroEdicao DEFAULT (1),
+        CONSTRAINT FK_LIVROS_EDITORAS FOREIGN KEY (IdEditora) REFERENCES dbo.EDITORAS(IdEditora),
+        CONSTRAINT FK_LIVROS_CATEGORIAS FOREIGN KEY (IdCategoria) REFERENCES dbo.CATEGORIAS(IdCategoria),
+        CONSTRAINT CK_LIVROS_Titulo CHECK (LEN(LTRIM(RTRIM(Titulo))) > 0),
+        CONSTRAINT CK_LIVROS_Ano CHECK (AnoPublicacao BETWEEN 1 AND 9999),
+        CONSTRAINT CK_LIVROS_Edicao CHECK (NumeroEdicao > 0),
+        CONSTRAINT CK_LIVROS_Isbn CHECK (Isbn IS NULL OR LEN(LTRIM(RTRIM(Isbn))) > 0)
+    );
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.LIVROS') AND name = N'UX_LIVROS_Isbn')
+    CREATE UNIQUE INDEX UX_LIVROS_Isbn ON dbo.LIVROS(Isbn) WHERE Isbn IS NOT NULL;
+GO
+
+IF OBJECT_ID(N'dbo.LIVROS_AUTORES', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.LIVROS_AUTORES (
+        IdLivro int NOT NULL,
+        IdAutor int NOT NULL,
+        CONSTRAINT PK_LIVROS_AUTORES PRIMARY KEY (IdLivro, IdAutor),
+        CONSTRAINT FK_LIVROS_AUTORES_LIVROS FOREIGN KEY (IdLivro) REFERENCES dbo.LIVROS(IdLivro),
+        CONSTRAINT FK_LIVROS_AUTORES_AUTORES FOREIGN KEY (IdAutor) REFERENCES dbo.AUTORES(IdAutor)
+    );
+END;
+GO
+
+IF OBJECT_ID(N'dbo.EXEMPLARES', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.EXEMPLARES (
+        IdExemplar int IDENTITY(1,1) NOT NULL CONSTRAINT PK_EXEMPLARES PRIMARY KEY,
+        IdLivro int NOT NULL,
+        CodigoTombo nvarchar(60) NOT NULL CONSTRAINT UQ_EXEMPLARES_CodigoTombo UNIQUE,
+        Situacao varchar(20) NOT NULL CONSTRAINT DF_EXEMPLARES_Situacao DEFAULT ('DISPONIVEL'),
+        DataAquisicao date NOT NULL CONSTRAINT DF_EXEMPLARES_DataAquisicao DEFAULT (CONVERT(date, SYSUTCDATETIME())),
+        CONSTRAINT FK_EXEMPLARES_LIVROS FOREIGN KEY (IdLivro) REFERENCES dbo.LIVROS(IdLivro),
+        CONSTRAINT CK_EXEMPLARES_CodigoTombo CHECK (LEN(LTRIM(RTRIM(CodigoTombo))) > 0),
+        CONSTRAINT CK_EXEMPLARES_Situacao CHECK (Situacao IN ('DISPONIVEL','EMPRESTADO','MANUTENCAO','INATIVO'))
+    );
+END;
+GO
+
+IF OBJECT_ID(N'dbo.USUARIOS', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.USUARIOS (
+        IdUsuario int IDENTITY(1,1) NOT NULL CONSTRAINT PK_USUARIOS PRIMARY KEY,
+        Nome nvarchar(160) NOT NULL,
+        Cpf varchar(11) NULL,
+        Email nvarchar(254) NOT NULL CONSTRAINT UQ_USUARIOS_Email UNIQUE,
+        Username nvarchar(80) NOT NULL CONSTRAINT UQ_USUARIOS_Username UNIQUE,
+        SenhaHash nvarchar(500) NOT NULL,
+        Perfil varchar(20) NOT NULL,
+        Ativo bit NOT NULL CONSTRAINT DF_USUARIOS_Ativo DEFAULT (1),
+        DataCadastro datetime2(7) NOT NULL CONSTRAINT DF_USUARIOS_DataCadastro DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT CK_USUARIOS_Nome CHECK (LEN(LTRIM(RTRIM(Nome))) > 0),
+        CONSTRAINT CK_USUARIOS_Username CHECK (LEN(LTRIM(RTRIM(Username))) > 0),
+        CONSTRAINT CK_USUARIOS_Email CHECK (LEN(LTRIM(RTRIM(Email))) > 0),
+        CONSTRAINT CK_USUARIOS_SenhaHash CHECK (LEN(SenhaHash) > 0),
+        CONSTRAINT CK_USUARIOS_Perfil CHECK (Perfil IN ('ADMINISTRADOR','BIBLIOTECARIO','LEITOR')),
+        CONSTRAINT CK_USUARIOS_Cpf CHECK (Cpf IS NULL OR (LEN(Cpf) = 11 AND Cpf NOT LIKE '%[^0-9]%'))
+    );
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.USUARIOS') AND name = N'UX_USUARIOS_Cpf')
+    CREATE UNIQUE INDEX UX_USUARIOS_Cpf ON dbo.USUARIOS(Cpf) WHERE Cpf IS NOT NULL;
+GO
+
+IF OBJECT_ID(N'dbo.EMPRESTIMOS', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.EMPRESTIMOS (
+        IdEmprestimo bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_EMPRESTIMOS PRIMARY KEY,
+        IdUsuario int NOT NULL,
+        IdOperador int NOT NULL,
+        Canal varchar(20) NOT NULL,
+        Situacao varchar(20) NOT NULL CONSTRAINT DF_EMPRESTIMOS_Situacao DEFAULT ('ABERTO'),
+        DataHoraEmprestimo datetime2(7) NOT NULL CONSTRAINT DF_EMPRESTIMOS_DataHoraEmprestimo DEFAULT (SYSUTCDATETIME()),
+        DataHoraPrevista datetime2(7) NOT NULL,
+        DataHoraDevolucao datetime2(7) NULL,
+        CONSTRAINT FK_EMPRESTIMOS_USUARIOS FOREIGN KEY (IdUsuario) REFERENCES dbo.USUARIOS(IdUsuario),
+        CONSTRAINT FK_EMPRESTIMOS_OPERADORES FOREIGN KEY (IdOperador) REFERENCES dbo.USUARIOS(IdUsuario),
+        CONSTRAINT CK_EMPRESTIMOS_Canal CHECK (Canal IN ('BALCAO','SELF_CHECKOUT')),
+        CONSTRAINT CK_EMPRESTIMOS_Situacao CHECK (Situacao IN ('ABERTO','FINALIZADO')),
+        CONSTRAINT CK_EMPRESTIMOS_Datas CHECK (
+            DataHoraPrevista >= DataHoraEmprestimo
+            AND (DataHoraDevolucao IS NULL OR DataHoraDevolucao >= DataHoraEmprestimo)),
+        CONSTRAINT CK_EMPRESTIMOS_Encerramento CHECK (
+            (Situacao = 'ABERTO' AND DataHoraDevolucao IS NULL)
+            OR (Situacao = 'FINALIZADO' AND DataHoraDevolucao IS NOT NULL)),
+        CONSTRAINT CK_EMPRESTIMOS_SelfCheckout CHECK (Canal <> 'SELF_CHECKOUT' OR IdUsuario = IdOperador)
+    );
+END;
+GO
+
+IF OBJECT_ID(N'dbo.ITENS_EMPRESTIMO', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ITENS_EMPRESTIMO (
+        IdItemEmprestimo bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_ITENS_EMPRESTIMO PRIMARY KEY,
+        IdEmprestimo bigint NOT NULL,
+        IdExemplar int NOT NULL,
+        DataHoraDevolucao datetime2(7) NULL,
+        CONSTRAINT FK_ITENS_EMPRESTIMO_EMPRESTIMOS FOREIGN KEY (IdEmprestimo) REFERENCES dbo.EMPRESTIMOS(IdEmprestimo),
+        CONSTRAINT FK_ITENS_EMPRESTIMO_EXEMPLARES FOREIGN KEY (IdExemplar) REFERENCES dbo.EXEMPLARES(IdExemplar),
+        CONSTRAINT UQ_ITENS_EMPRESTIMO_LoanCopy UNIQUE (IdEmprestimo, IdExemplar)
+    );
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ITENS_EMPRESTIMO') AND name = N'UX_ITENS_EMPRESTIMO_ExemplarAberto')
+    CREATE UNIQUE INDEX UX_ITENS_EMPRESTIMO_ExemplarAberto ON dbo.ITENS_EMPRESTIMO(IdExemplar) WHERE DataHoraDevolucao IS NULL;
+GO
+
+IF OBJECT_ID(N'dbo.TBL_LOG_SISTEMA', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.TBL_LOG_SISTEMA (
+        IdLogSistema uniqueidentifier NOT NULL CONSTRAINT DF_TBL_LOG_SISTEMA_Id DEFAULT (NEWID()) CONSTRAINT PK_TBL_LOG_SISTEMA PRIMARY KEY NONCLUSTERED,
+        IdUsuario int NULL,
+        Evento nvarchar(120) NOT NULL,
+        Detalhes nvarchar(1000) NULL,
+        DataHoraEvento datetime2(7) NOT NULL CONSTRAINT DF_TBL_LOG_SISTEMA_Data DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT FK_TBL_LOG_SISTEMA_USUARIOS FOREIGN KEY (IdUsuario) REFERENCES dbo.USUARIOS(IdUsuario),
+        CONSTRAINT CK_TBL_LOG_SISTEMA_Evento CHECK (LEN(LTRIM(RTRIM(Evento))) > 0)
+    );
+END;
+GO
+
+IF OBJECT_ID(N'dbo.CONFIGURACOES', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.CONFIGURACOES (
+        Id int NOT NULL CONSTRAINT PK_CONFIGURACOES PRIMARY KEY CONSTRAINT CK_CONFIGURACOES_Id CHECK (Id = 1),
+        LimiteExemplares int NOT NULL CONSTRAINT DF_CONFIGURACOES_Limite DEFAULT (3),
+        PrazoDias int NOT NULL CONSTRAINT DF_CONFIGURACOES_Prazo DEFAULT (14),
+        BloquearAtrasados bit NOT NULL CONSTRAINT DF_CONFIGURACOES_Bloquear DEFAULT (1),
+        SelfCheckoutHabilitado bit NOT NULL CONSTRAINT DF_CONFIGURACOES_SelfCheckout DEFAULT (1),
+        CONSTRAINT CK_CONFIGURACOES_Limite CHECK (LimiteExemplares BETWEEN 1 AND 100),
+        CONSTRAINT CK_CONFIGURACOES_Prazo CHECK (PrazoDias BETWEEN 1 AND 365)
+    );
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.CONFIGURACOES WHERE Id = 1)
+    INSERT INTO dbo.CONFIGURACOES(Id) VALUES (1);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.LIVROS') AND name = N'IX_LIVROS_Categoria')
+    CREATE INDEX IX_LIVROS_Categoria ON dbo.LIVROS(IdCategoria);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.LIVROS_AUTORES') AND name = N'IX_LIVROS_AUTORES_Autor')
+    CREATE INDEX IX_LIVROS_AUTORES_Autor ON dbo.LIVROS_AUTORES(IdAutor, IdLivro);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.EXEMPLARES') AND name = N'IX_EXEMPLARES_LivroSituacao')
+    CREATE INDEX IX_EXEMPLARES_LivroSituacao ON dbo.EXEMPLARES(IdLivro, Situacao);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.EMPRESTIMOS') AND name = N'IX_EMPRESTIMOS_UsuarioSituacao')
+    CREATE INDEX IX_EMPRESTIMOS_UsuarioSituacao ON dbo.EMPRESTIMOS(IdUsuario, Situacao) INCLUDE (DataHoraPrevista);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.TBL_LOG_SISTEMA') AND name = N'IX_TBL_LOG_SISTEMA_Data')
+    CREATE CLUSTERED INDEX IX_TBL_LOG_SISTEMA_Data ON dbo.TBL_LOG_SISTEMA(DataHoraEvento, IdLogSistema);
+GO

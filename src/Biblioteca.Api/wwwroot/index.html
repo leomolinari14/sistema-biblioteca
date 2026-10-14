@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Biblioteca</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="page-login" class="page active">
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="login-logo">
+        <img src="logo-unip.png" alt="UNIP" class="login-unip-logo" />
+        <h1>Biblioteca</h1>
+        <p>Faça login para continuar</p>
+      </div>
+      <form id="form-login">
+        <div class="field">
+          <label for="login-username"><i class="bi bi-person"></i> Usuário</label>
+          <input id="login-username" type="text" autocomplete="username" placeholder="seu.usuario" required />
+        </div>
+        <div class="field">
+          <label for="login-senha"><i class="bi bi-lock"></i> Senha</label>
+          <input id="login-senha" type="password" autocomplete="current-password" placeholder="••••••••" required />
+        </div>
+        <div id="login-error" class="alert alert-error hidden"></div>
+        <button type="submit" class="btn btn-primary btn-full" id="btn-login">
+          <i class="bi bi-box-arrow-in-right"></i> Entrar
+        </button>
+      </form>
+      <div class="login-register">
+        <span>Ainda não possui cadastro?</span>
+        <button type="button" id="btn-cadastro-aluno" class="btn btn-outline btn-full">
+          <i class="bi bi-person-plus"></i> Cadastrar aluno
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="page-app" class="page">
+
+  <!-- Sidebar -->
+  <nav id="sidebar">
+    <div class="sidebar-header">
+      <img src="logo-unip.png" alt="UNIP" class="sidebar-unip-logo" />
+      <span class="sidebar-title">Biblioteca</span>
+    </div>
+    <ul id="nav-menu" class="nav-menu"></ul>
+    <div class="sidebar-footer">
+      <div id="user-info" class="user-chip"></div>
+      <button id="btn-logout" class="btn btn-ghost btn-sm"><i class="bi bi-box-arrow-left"></i> Sair</button>
+    </div>
+  </nav>
+
+  <!-- Conteúdo -->
+  <main id="main-content">
+    <!-- Cabeçalho mobile -->
+    <header id="top-bar">
+      <button id="btn-menu-toggle" class="btn btn-icon" aria-label="Menu"><i class="bi bi-list"></i></button>
+      <span id="page-title" class="page-title">Início</span>
+    </header>
+
+    <!-- Seções -->
+    <section id="sec-home" class="section active">
+      <div class="section-header">
+        <h2><i class="bi bi-house"></i> Início</h2>
+      </div>
+      <div id="home-cards" class="home-cards"></div>
+    </section>
+
+    <section id="sec-self-checkout" class="section">
+      <div class="section-header">
+        <h2><i class="bi bi-upc-scan"></i> Self-Checkout</h2>
+        <p class="section-desc">Empreste ou devolva livros usando o código de tombo</p>
+      </div>
+
+      <div class="checkout-mode-tabs" role="tablist" aria-label="Operação do self-checkout">
+        <button id="btn-mode-loan" type="button" class="btn btn-primary" role="tab" aria-selected="true">
+          <i class="bi bi-box-arrow-right"></i> Emprestar
+        </button>
+        <button id="btn-mode-return" type="button" class="btn btn-outline" role="tab" aria-selected="false">
+          <i class="bi bi-box-arrow-in-left"></i> Devolver
+        </button>
+      </div>
+
+      <div id="checkout-loan-mode">
+        <div id="checkout-loan-layout" class="checkout-layout">
+          <!-- Scanner de empréstimo -->
+          <div class="card checkout-scanner">
+            <h3><i class="bi bi-plus-circle"></i> Adicionar ao empréstimo</h3>
+            <div class="field">
+              <label for="checkout-codigo">Código de tombo</label>
+              <div class="input-group">
+                <input id="checkout-codigo" type="text" placeholder="Ex: DEMO-BD-001"
+                       autocomplete="off" spellcheck="false" />
+                <button id="btn-checkout-add" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Adicionar</button>
+              </div>
+            </div>
+            <div id="checkout-lookup-result" class="lookup-result hidden"></div>
+          </div>
+
+          <!-- Carrinho de empréstimo -->
+          <div class="card checkout-cart">
+            <h3><i class="bi bi-cart3"></i> Exemplares selecionados <span id="checkout-count" class="badge">0</span></h3>
+            <ul id="checkout-items" class="item-list">
+              <li class="empty-state">Nenhum exemplar adicionado ainda.</li>
+            </ul>
+            <div id="checkout-error" class="alert alert-error hidden"></div>
+            <div class="checkout-actions">
+              <button id="btn-checkout-confirm" class="btn btn-success btn-full" disabled>
+                <i class="bi bi-check-circle"></i> Confirmar empréstimo
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Comprovante de empréstimo -->
+        <div id="checkout-receipt" class="card receipt hidden">
+          <div class="receipt-header">
+            <i class="bi bi-check-circle-fill receipt-icon"></i>
+            <div>
+              <h3>Empréstimo registrado!</h3>
+              <p id="receipt-prazo"></p>
+            </div>
+          </div>
+          <table class="table" id="receipt-table">
+            <thead><tr><th>Código</th><th>Título</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <button id="btn-checkout-novo" class="btn btn-outline mt-2"><i class="bi bi-arrow-repeat"></i> Novo empréstimo</button>
+        </div>
+      </div>
+
+      <div id="checkout-return-mode" class="hidden">
+        <div id="checkout-return-layout" class="checkout-layout">
+          <!-- Scanner de devolução -->
+          <div class="card checkout-scanner">
+            <h3><i class="bi bi-arrow-return-left"></i> Adicionar à devolução</h3>
+            <div class="field">
+              <label for="return-codigo">Código de tombo</label>
+              <div class="input-group">
+                <input id="return-codigo" type="text" placeholder="Ex: DEMO-BD-001"
+                       autocomplete="off" spellcheck="false" />
+                <button id="btn-return-add" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Adicionar</button>
+              </div>
+            </div>
+            <div id="return-lookup-result" class="lookup-result hidden"></div>
+          </div>
+
+          <!-- Carrinho de devolução -->
+          <div class="card checkout-cart">
+            <h3><i class="bi bi-box-arrow-in-left"></i> Exemplares para devolver <span id="return-count" class="badge">0</span></h3>
+            <ul id="return-items" class="item-list">
+              <li class="empty-state">Nenhum exemplar adicionado ainda.</li>
+            </ul>
+            <div id="return-error" class="alert alert-error hidden"></div>
+            <div class="checkout-actions">
+              <button id="btn-return-confirm" class="btn btn-success btn-full" disabled>
+                <i class="bi bi-check-circle"></i> Confirmar devolução
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Comprovante de devolução -->
+        <div id="return-receipt" class="card receipt hidden">
+          <div class="receipt-header">
+            <i class="bi bi-check-circle-fill receipt-icon"></i>
+            <div>
+              <h3>Devolução registrada!</h3>
+              <p>Os exemplares já estão disponíveis no catálogo.</p>
+            </div>
+          </div>
+          <table class="table" id="return-receipt-table">
+            <thead><tr><th>Código</th><th>Título</th><th>Empréstimo</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <button id="btn-return-new" class="btn btn-outline mt-2"><i class="bi bi-arrow-repeat"></i> Nova devolução</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-meus-emprestimos" class="section">
+      <div class="section-header">
+        <h2><i class="bi bi-journal-text"></i> Meus Empréstimos</h2>
+      </div>
+      <div class="filter-bar">
+        <select id="filter-meus-situacao" class="select-sm">
+          <option value="">Todos</option>
+          <option value="ABERTO">Abertos</option>
+          <option value="FINALIZADO">Finalizados</option>
+        </select>
+      </div>
+      <div id="meus-emprestimos-list" class="loan-list"></div>
+      <div id="meus-emprestimos-pagination" class="pagination"></div>
+    </section>
+
+    <section id="sec-catalogo" class="section">
+      <div class="section-header">
+        <h2><i class="bi bi-book"></i> Catálogo</h2>
+        <button id="btn-novo-livro" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Novo livro</button>
+      </div>
+      <div class="filter-bar">
+        <input id="filter-livros-q" type="search" placeholder="Buscar título ou ISBN…" class="filter-search" />
+        <select id="filter-livros-categoria" class="select-sm">
+          <option value="">Todas as categorias</option>
+        </select>
+      </div>
+      <div id="livros-grid" class="book-grid"></div>
+      <div id="livros-pagination" class="pagination"></div>
+    </section>
+
+    <section id="sec-emprestimos" class="section">
+      <div class="section-header">
+        <h2><i class="bi bi-arrow-left-right"></i> Empréstimos</h2>
+        <button id="btn-novo-emprestimo" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Novo empréstimo</button>
+      </div>
+      <div class="filter-bar">
+        <select id="filter-emp-situacao" class="select-sm">
+          <option value="">Todos</option>
+          <option value="ABERTO">Abertos</option>
+          <option value="FINALIZADO">Finalizados</option>
+        </select>
+      </div>
+      <div id="emprestimos-list" class="loan-list"></div>
+      <div id="emprestimos-pagination" class="pagination"></div>
+    </section>
+
+    <section id="sec-exemplares" class="section">
+      <div class="section-header">
+        <h2><i class="bi bi-bookmark"></i> Exemplares</h2>
+        <button id="btn-novo-exemplar" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Novo exemplar</button>
+      </div>
+      <div class="filter-bar">
+        <select id="filter-ex-situacao" class="select-sm">
+          <option value="">Todas as situações</option>
+          <option value="DISPONIVEL">Disponível</option>
+          <option value="EMPRESTADO">Emprestado</option>
+          <option value="MANUTENCAO">Manutenção</option>
+          <option value="INATIVO">Inativo</option>
+        </select>
+      </div>
+      <div id="exemplares-table-wrap" class="table-wrap">
+        <table class="table" id="exemplares-table">
+          <thead>
+            <tr><th>Código</th><th>Título</th><th>Situação</th><th>Aquisição</th><th>Ações</th></tr>
+          </thead>
+          <tbody id="exemplares-tbody"></tbody>
+        </table>
+      </div>
+      <div id="exemplares-pagination" class="pagination"></div>
+    </section>
+
+    <section id="sec-usuarios" class="section">
+      <div class="section-header">
+        <h2><i class="bi bi-people"></i> Alunos e usuários</h2>
+        <button id="btn-novo-usuario" class="btn btn-primary btn-sm"><i class="bi bi-person-plus"></i> Novo cadastro</button>
+      </div>
+      <div id="usuarios-table-wrap" class="table-wrap">
+        <table class="table" id="usuarios-table">
+          <thead>
+            <tr><th>Nome</th><th>Username</th><th>Perfil</th><th>Situação</th><th>Ações</th></tr>
+          </thead>
+          <tbody id="usuarios-tbody"></tbody>
+        </table>
+      </div>
+      <div id="usuarios-pagination" class="pagination"></div>
+    </section>
+
+    <section id="sec-configuracoes" class="section">
+      <div class="section-header">
+        <h2><i class="bi bi-gear"></i> Configurações</h2>
+      </div>
+      <div class="card config-card">
+        <form id="form-config">
+          <div class="config-grid">
+            <div class="field">
+              <label for="cfg-limite"><i class="bi bi-collection"></i> Limite de exemplares por leitor</label>
+              <input id="cfg-limite" type="number" min="1" max="100" />
+            </div>
+            <div class="field">
+              <label for="cfg-prazo"><i class="bi bi-calendar3"></i> Prazo de empréstimo (dias)</label>
+              <input id="cfg-prazo" type="number" min="1" max="365" />
+            </div>
+            <div class="field field-toggle">
+              <label class="toggle-label">
+                <input id="cfg-bloquear" type="checkbox" class="toggle-input" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                Bloquear leitores com atraso
+              </label>
+            </div>
+            <div class="field field-toggle">
+              <label class="toggle-label">
+                <input id="cfg-self-checkout" type="checkbox" class="toggle-input" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                Self-checkout habilitado
+              </label>
+            </div>
+          </div>
+          <div id="config-alert" class="alert hidden"></div>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar configurações</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="sec-auditoria" class="section">
+      <div class="section-header">
+        <h2><i class="bi bi-shield-check"></i> Auditoria</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="table" id="auditoria-table">
+          <thead>
+            <tr><th>Data/Hora</th><th>Usuário</th><th>Evento</th><th>Detalhes</th></tr>
+          </thead>
+          <tbody id="auditoria-tbody"></tbody>
+        </table>
+      </div>
+      <div id="auditoria-pagination" class="pagination"></div>
+    </section>
+  </main>
+</div>
+
+<!-- ===== MODAIS ===== -->
+<div id="modal-overlay" class="modal-overlay hidden">
+  <div id="modal-box" class="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title"></h3>
+      <button id="modal-close" class="btn btn-icon"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div id="modal-body" class="modal-body"></div>
+  </div>
+</div>
+
+<script src="api.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
